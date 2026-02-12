@@ -28,21 +28,30 @@ export default function clientOnlyWrapper<T extends Component<any>>(
       props.fallback
 
   const [comp, setComp] = createSignal<T>()
-  !options.lazy && load(fn, setComp)
+  const loadStarted = !options.lazy
+  loadStarted && load(fn, setComp)
   return (props: ComponentProps<T>) => {
     let Comp: T | undefined
-    let m: boolean
     const [, rest] = splitProps(props, ["fallback"])
     options.lazy && load(fn, setComp)
+    // If component is already loaded, render it immediately
     if ((Comp = comp()) && !sharedConfig.context) return Comp(rest)
+    // If we started loading eagerly (not lazy), render as soon as component loads
+    if (loadStarted) {
+      return createMemo(() => {
+        const C = comp()
+        return untrack(() => (C ? C(rest) : props.fallback))
+      })
+    }
+    // For lazy loading, wait for mount
     const [mounted, setMounted] = createSignal(!sharedConfig.context)
     onMount(() => setMounted(true))
     return createMemo(
-      () => (
-        (Comp = comp()),
-        (m = mounted()),
-        untrack(() => (Comp && m ? Comp(rest) : props.fallback))
-      ),
+      () => {
+        const C = comp()
+        const m = mounted()
+        return untrack(() => (C && m ? C(rest) : props.fallback))
+      },
     )
   }
 }
