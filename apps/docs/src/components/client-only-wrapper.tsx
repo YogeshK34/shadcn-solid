@@ -46,13 +46,11 @@ export default function clientOnlyWrapper<T extends Component<any>>(
     // For lazy loading, wait for mount
     const [mounted, setMounted] = createSignal(!sharedConfig.context)
     onMount(() => setMounted(true))
-    return createMemo(
-      () => {
-        const C = comp()
-        const m = mounted()
-        return untrack(() => (C && m ? C(rest) : props.fallback))
-      },
-    )
+    return createMemo(() => {
+      const C = comp()
+      const m = mounted()
+      return untrack(() => (C && m ? C(rest) : props.fallback))
+    })
   }
 }
 
